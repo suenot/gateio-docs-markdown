@@ -122,3 +122,134 @@ Retrieve account balance change history.
   }
 ]
 ```
+
+## Risk Management System
+
+### Margin Levels
+
+The system uses three key margin levels:
+
+1. Initial Margin (IM)
+   - Required to open a position
+   - Calculated based on leverage and position size
+   - Higher for larger positions
+
+2. Maintenance Margin (MM)
+   - Minimum margin to keep position open
+   - Usually 50% of initial margin
+   - Varies by contract and position size
+
+3. Liquidation Margin (LM)
+   - Point at which liquidation begins
+   - Equal to maintenance margin
+   - Buffer recommended above this level
+
+### Margin Ratio Calculation
+
+```
+Margin Ratio = (Wallet Balance + Unrealized PNL) / Initial Margin
+
+Risk Levels:
+Safe: > 1.5
+Warning: 1.1 - 1.5
+Danger: 1.0 - 1.1
+Liquidation: < 1.0
+```
+
+### Risk Limits
+
+| Contract | Base Risk Limit | Step Size | Maximum Risk Limit |
+|----------|----------------|-----------|-------------------|
+| BTC_USDT | 100 BTC | 25 BTC | 1000 BTC |
+| ETH_USDT | 1000 ETH | 250 ETH | 10000 ETH |
+
+Risk limits determine maximum position size and margin requirements.
+
+## Insurance Fund
+
+The insurance fund protects traders from negative account balances and ensures orderly liquidations.
+
+### Fund Sources
+
+1. Liquidation profits
+2. ADL compensation fees
+3. Platform contributions
+
+### Fund Usage
+
+1. Cover liquidation losses
+2. Maintain market stability
+3. Prevent socialized losses
+
+### Fund Statistics
+
+```json
+{
+  "total_balance": "1000000",
+  "daily_income": "5000",
+  "daily_usage": "2000",
+  "currency": "USDT"
+}
+```
+
+## Position Risk Calculation
+
+### Value at Risk (VaR)
+
+```
+VaR = Position Size * Mark Price * VaR Coefficient
+
+where:
+VaR Coefficient is based on:
+- Historical volatility
+- Market liquidity
+- Position concentration
+```
+
+### Stress Testing
+
+Positions are stress tested against:
+1. Market crashes (-40%)
+2. Flash crashes (-20% in 5 minutes)
+3. Liquidity crises
+4. Volatility spikes
+
+### Risk Metrics
+
+```json
+{
+  "position_risk": {
+    "var_99": "10000",
+    "expected_shortfall": "15000",
+    "stress_test_loss": "20000"
+  }
+}
+```
+
+## Rate Limits
+
+| Endpoint | Rate Limit |
+|----------|------------|
+| Account Query | 10 per second |
+| Position Risk | 10 per second |
+| Account Book | 10 per second |
+
+## Error Codes
+
+| Code | Message | Description |
+|------|---------|-------------|
+| 4001 | Insufficient balance | Not enough funds |
+| 4002 | Risk limit exceeded | Position too large |
+| 4003 | Margin ratio too low | Add margin or reduce position |
+| 4004 | Liquidation in progress | Position being liquidated |
+
+## Best Practices
+
+1. Maintain healthy margin ratio
+2. Monitor risk limits
+3. Use appropriate leverage
+4. Set alerts for margin levels
+5. Understand liquidation process
+6. Keep emergency funds ready
+7. Monitor insurance fund status
+8. Regular risk assessment

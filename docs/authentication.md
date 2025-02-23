@@ -19,124 +19,139 @@ When creating API keys, you can set different permission levels:
 
 ### Request Signing
 
-1. **Create a timestamp**
-   - Use current Unix timestamp in seconds
-
-2. **Prepare the payload string**
+1. Create a string to sign:
    ```
-   METHOD|PATH|QUERY_STRING|HASHED_PAYLOAD|TIMESTAMP
+   HTTPMethod|Path|Query|Timestamp|Payload
    ```
-   - METHOD: HTTP method (GET, POST, etc.)
-   - PATH: Request path without host and query string
-   - QUERY_STRING: URL parameters sorted alphabetically
-   - HASHED_PAYLOAD: SHA512 hash of the request body (empty string for GET)
-   - TIMESTAMP: The timestamp from step 1
+2. Generate HMAC SHA512 signature using your API Secret
+3. Add required headers:
+   - `KEY`: Your API Key
+   - `Timestamp`: Current Unix timestamp
+   - `SIGN`: Generated signature
 
-3. **Generate the signature**
-   - Create HMAC SHA512 hash of the payload using your API Secret
-   - Encode the result in hexadecimal
-
-### Request Headers
-
-Include these headers in your request:
-```
-KEY: Your API Key
-Timestamp: Your timestamp
-SIGN: Your generated signature
-```
-
-## Example Implementation
+## Code Examples
 
 ### Python
+
 ```python
 import time
 import hmac
 import hashlib
+import requests
+from gate_api import ApiClient, Configuration
 
-def sign_request(method, path, query_string, body, api_key, api_secret):
-    t = str(int(time.time()))
+def sign_request(method: str, path: str, query_string: str = '', body: str = ''):
+    t = time.time()
     m = hashlib.sha512()
-    m.update(body.encode('utf-8'))
-    hashed_payload = m.hexdigest()
-    
-    s = '|'.join([method, path, query_string, hashed_payload, t])
-    
-    sign = hmac.new(
-        api_secret.encode('utf-8'),
-        s.encode('utf-8'),
-        hashlib.sha512
-    ).hexdigest()
-    
+    m.update((method + '|' + path + '|' + query_string + '|' + 
+             str(t) + '|' + body).encode('utf-8'))
+    sign = hmac.new(api_secret.encode('utf-8'), 
+                    m.digest(), 
+                    hashlib.sha512).hexdigest()
     return {
         'KEY': api_key,
-        'Timestamp': t,
+        'Timestamp': str(t),
         'SIGN': sign
     }
+
+# Usage example
+config = Configuration(key='your_api_key', secret='your_api_secret')
+client = ApiClient(config)
 ```
 
 ### Node.js
+
 ```javascript
 const crypto = require('crypto');
+const GateApi = require('@gateio/gate-api');
 
-function signRequest(method, path, queryString, body, apiKey, apiSecret) {
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const hashedPayload = crypto
-        .createHash('sha512')
-        .update(body)
-        .digest('hex');
+function signRequest(method, path, queryString = '', body = '') {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const stringToSign = `${method}|${path}|${queryString}|${timestamp}|${body}`;
     
-    const signString = [
-        method,
-        path,
-        queryString,
-        hashedPayload,
-        timestamp
-    ].join('|');
+    const hash = crypto.createHash('sha512')
+                      .update(stringToSign)
+                      .digest();
     
-    const signature = crypto
-        .createHmac('sha512', apiSecret)
-        .update(signString)
-        .digest('hex');
-    
+    const signature = crypto.createHmac('sha512', apiSecret)
+                          .update(hash)
+                          .digest('hex');
+
     return {
-        KEY: apiKey,
-        Timestamp: timestamp,
-        SIGN: signature
+        'KEY': apiKey,
+        'Timestamp': timestamp.toString(),
+        'SIGN': signature
     };
 }
+
+// Usage example
+const client = new GateApi.ApiClient();
+client.setApiKeySecret('your_api_key', 'your_api_secret');
 ```
 
-## Security Best Practices
+### Go
 
-1. **Protect Your API Secret**
-   - Never share your API Secret
-   - Store it securely
-   - Use environment variables
+```go
+package main
 
-2. **Key Management**
-   - Regularly rotate your API keys
-   - Use different keys for different applications
-   - Limit IP addresses when possible
+import (
+    "crypto/hmac"
+    "crypto/sha512"
+    "encoding/hex"
+    "fmt"
+    "strconv"
+    "time"
+    "github.com/gateio/gateapi-go/v6"
+)
 
-3. **Request Validation**
-   - Verify SSL/TLS certificates
-   - Check server timestamps
-   - Implement request timeout
+func signRequest(method, path, queryString, body string) map[string]string {
+    timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+    stringToSign := fmt.Sprintf("%s|%s|%s|%s|%s", 
+        method, path, queryString, timestamp, body)
 
-## Common Issues
+    h := sha512.New()
+    h.Write([]byte(stringToSign))
+    
+    mac := hmac.New(sha512.New, []byte(apiSecret))
+    mac.Write(h.Sum(nil))
+    sign := hex.EncodeToString(mac.Sum(nil))
 
-1. **Invalid Signature**
-   - Check timestamp accuracy
-   - Verify payload string format
-   - Ensure correct API Secret usage
+    return map[string]string{
+        "KEY":       apiKey,
+        "Timestamp": timestamp,
+        "SIGN":      sign,
+    }
+}
 
-2. **Request Timeout**
-   - Verify system clock synchronization
-   - Check network connectivity
-   - Implement retry logic
+// Usage example
+client := gateapi.NewAPIClient(gateapi.NewConfiguration())
+client.SetApiKeySecret("your_api_key", "your_api_secret")
+```
 
-## Next Steps
+## Best Practices
 
-- Review [Error Codes](./error-codes.md)
-- Understand [Rate Limits](./rate-limits.md)
-- Explore API endpoints in product-specific sections
+1. **Never share your API Secret**
+   - Keep your API Secret secure
+   - Don't include it in client-side code
+   - Don't commit it to version control
+
+2. **Use appropriate permissions**
+   - Only enable the permissions you need
+   - Use read-only keys when possible
+   - Create separate keys for different applications
+
+3. **Handle timestamps correctly**
+   - Use Unix timestamp in seconds
+   - Ensure your system clock is synchronized
+   - Server allows ±30 seconds time difference
+
+4. **Implement rate limiting**
+   - Track your API usage
+   - Implement exponential backoff
+   - Handle rate limit errors gracefully
+
+5. **Security recommendations**
+   - Use HTTPS only
+   - Implement IP whitelisting
+   - Rotate API keys periodically
+   - Monitor for unauthorized access

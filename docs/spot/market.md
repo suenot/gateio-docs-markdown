@@ -132,6 +132,20 @@ Retrieve candlestick/kline data for a specific currency pair.
 | interval | string | No | Time interval (default: 30m) |
 | limit | integer | No | Number of candles (default: 100, max: 1000) |
 
+### Supported Intervals
+
+The following intervals are supported for candlestick data:
+- `10s`: 10 seconds
+- `1m`: 1 minute
+- `5m`: 5 minutes
+- `15m`: 15 minutes
+- `30m`: 30 minutes
+- `1h`: 1 hour
+- `4h`: 4 hours
+- `8h`: 8 hours
+- `1d`: 1 day
+- `7d`: 7 days
+
 ### Response
 
 ```json
@@ -147,3 +161,40 @@ Retrieve candlestick/kline data for a specific currency pair.
   ]
 ]
 ```
+
+## Rate Limits
+
+The following rate limits apply to market data endpoints:
+
+| Endpoint | Rate Limit |
+|----------|------------|
+| All Market Endpoints | 900 requests per minute |
+| Order Book | 300 requests per minute |
+| Recent Trades | 300 requests per minute |
+| Candlesticks | 300 requests per minute |
+
+Rate limits are applied per IP address. Exceeding these limits will result in HTTP 429 errors.
+
+## Error Codes
+
+| Code | Message | Description |
+|------|---------|-------------|
+| 400 | Bad Request | Invalid request format |
+| 401 | Unauthorized | Authentication required |
+| 403 | Forbidden | The request is forbidden |
+| 404 | Not Found | The specified resource does not exist |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Internal server error |
+| 1001 | Invalid currency pair | The specified currency pair is not supported |
+| 1002 | Invalid interval | The specified candlestick interval is not supported |
+| 1003 | Invalid limit | The specified limit is out of range |
+| 1004 | Market is closed | Trading is currently suspended for this pair |
+
+## Best Practices
+
+1. Use WebSocket for real-time data instead of polling REST endpoints
+2. Cache market data locally and update only when needed
+3. Implement rate limiting in your client
+4. Handle error responses gracefully
+5. Use appropriate intervals for candlestick data based on your needs
+6. Monitor your API usage to avoid hitting rate limits

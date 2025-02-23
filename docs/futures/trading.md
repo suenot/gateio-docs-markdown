@@ -21,6 +21,9 @@ Place a new futures order.
 | tif       | string | No       | Time in force: `gtc`, `ioc`, `poc` (default: `gtc`) |
 | iceberg   | number | No       | Display size for iceberg order |
 | text      | string | No       | Custom order ID or remarks |
+| reduce_only | boolean | No | Reduce-only order |
+| stop | string | No | Stop order type: `loss` or `profit` |
+| stop_price | string | No | Stop order trigger price |
 
 ### Response
 
@@ -145,4 +148,122 @@ Retrieve all open futures orders.
     "is_close": false
   }
 ]
+
+## Order Types
+
+### Reduce-Only Orders
+
+Reduce-only orders can only reduce your position size, never increase it. This is useful for closing positions and managing risk.
+
+```json
+{
+  "contract": "BTC_USDT",
+  "size": -1,
+  "price": "50000",
+  "reduce_only": true
+}
 ```
+
+- If a reduce-only order would increase your position, it is rejected
+- Can be combined with any order type (limit, market)
+- Useful for ensuring stop-loss orders don't flip your position
+
+### Stop Orders
+
+Stop orders are triggered when the mark price reaches a specified trigger price.
+
+#### Stop Loss
+
+```json
+{
+  "contract": "BTC_USDT",
+  "size": -1,
+  "price": "45000",
+  "stop": "loss",
+  "stop_price": "46000"
+}
+```
+
+- Triggers when price moves against your position
+- Can be market or limit order
+- Recommended for risk management
+
+#### Take Profit
+
+```json
+{
+  "contract": "BTC_USDT",
+  "size": -1,
+  "price": "55000",
+  "stop": "profit",
+  "stop_price": "54000"
+}
+```
+
+- Triggers when price moves in favor of your position
+- Can be market or limit order
+- Used to lock in profits
+
+## Position Liquidation
+
+### Liquidation Process
+
+1. Initial warning at 80% of maintenance margin
+2. Partial liquidation starts at 90% of maintenance margin
+3. Full liquidation at 100% of maintenance margin
+
+### Liquidation Price Calculation
+
+```
+Long Position:
+Liquidation Price = Entry Price * (1 - Initial Margin Rate + Maintenance Margin Rate)
+
+Short Position:
+Liquidation Price = Entry Price * (1 + Initial Margin Rate - Maintenance Margin Rate)
+```
+
+### Liquidation Prevention
+
+1. Add margin to position
+2. Reduce position size
+3. Set stop-loss orders
+4. Monitor margin ratio
+
+### Auto-Deleveraging (ADL)
+
+When liquidation cannot be completed in the market:
+
+1. Positions are ranked by profit ratio
+2. Profitable counter positions are reduced
+3. ADL ranking shown in position details
+4. Affected traders compensated at bankruptcy price
+
+## Rate Limits
+
+| Endpoint | Rate Limit |
+|----------|------------|
+| Order Placement | 100 per second |
+| Order Cancellation | 100 per second |
+| Position Query | 50 per second |
+
+## Error Codes
+
+| Code | Message | Description |
+|------|---------|-------------|
+| 3001 | Insufficient margin | Not enough margin for order |
+| 3002 | Position not found | No position exists |
+| 3003 | Order rejected | Order parameters invalid |
+| 3004 | Reduce only violation | Order would increase position |
+| 3005 | Position would exceed limit | Order size too large |
+| 3006 | Price deviation too large | Order price too far from mark |
+
+## Best Practices
+
+1. Always use stop-loss orders
+2. Monitor liquidation prices
+3. Keep sufficient margin buffer
+4. Use reduce-only for position closing
+5. Consider market impact
+6. Monitor ADL rankings
+7. Implement proper error handling
+8. Track all open orders

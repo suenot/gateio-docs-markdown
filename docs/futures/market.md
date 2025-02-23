@@ -184,3 +184,107 @@ Retrieve funding rate for a specific futures contract.
   "funding_time": 1623456789
 }
 ```
+
+## Index Price Calculation
+
+The index price is calculated using a weighted average of prices from major spot exchanges. This helps ensure fair and manipulation-resistant price discovery.
+
+### Index Components
+
+- Weighted average of spot prices from major exchanges
+- Minimum of 3 exchanges used in calculation
+- Outlier prices are excluded
+- Updated every second
+
+### Mark Price
+
+The mark price is used for liquidation and PNL calculations. It is calculated using:
+1. Index price
+2. Funding rate
+3. Market basis
+4. Insurance fund coefficient
+
+## Funding Rate Mechanism
+
+Funding rates are used to keep perpetual futures prices aligned with the underlying index.
+
+### Calculation
+
+The funding rate consists of two components:
+1. Interest Rate Component (IRC)
+   - Based on interest rate difference between quote and base currencies
+2. Premium Index Component (PIC)
+   - Based on the difference between mark price and index price
+
+### Schedule
+
+- Funding is exchanged every 8 hours
+- Timestamps: 00:00, 08:00, 16:00 UTC
+- Funding rate is capped at ±0.75% per period
+
+### Formula
+
+```
+Funding Rate = IRC + PIC
+where:
+PIC = (Mark Price - Index Price) / Index Price
+```
+
+## Liquidity Limits
+
+To ensure market stability and prevent manipulation, the following limits apply:
+
+### Order Size Limits
+
+| Contract Type | Maximum Order Size | Maximum Position Size |
+|--------------|-------------------|---------------------|
+| BTC_USDT | 1000 contracts | 5000 contracts |
+| ETH_USDT | 5000 contracts | 25000 contracts |
+| Other | Varies by contract | Varies by contract |
+
+### Price Limits
+
+- Maximum price deviation from mark price: ±5%
+- Maximum price deviation during volatile periods: ±10%
+- Circuit breaker triggers at ±20% price movement
+
+### Market Impact
+
+- Large orders are split into smaller chunks
+- Slippage increases with order size
+- Market makers receive incentives for providing liquidity
+
+## Rate Limits
+
+| Endpoint | Rate Limit |
+|----------|------------|
+| All Market Endpoints | 900 requests per minute |
+| Order Book | 300 requests per minute |
+| Recent Trades | 300 requests per minute |
+| Candlesticks | 300 requests per minute |
+
+## Error Codes
+
+| Code | Message | Description |
+|------|---------|-------------|
+| 400 | Bad Request | Invalid request format |
+| 401 | Unauthorized | Authentication required |
+| 403 | Forbidden | The request is forbidden |
+| 404 | Not Found | The specified resource does not exist |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Internal server error |
+| 2001 | Invalid contract | The specified contract is not supported |
+| 2002 | Invalid interval | The specified interval is not supported |
+| 2003 | Invalid limit | The specified limit is out of range |
+| 2004 | Market is closed | Trading is currently suspended |
+
+## Best Practices
+
+1. Use WebSocket for real-time data
+2. Monitor funding rates before position entry
+3. Consider market impact for large orders
+4. Implement proper rate limiting
+5. Handle error responses gracefully
+6. Cache market data when appropriate
+7. Monitor index price components
+8. Track liquidation risks
